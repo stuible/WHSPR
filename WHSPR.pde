@@ -28,8 +28,8 @@ void setup(){
   smooth();
   pitchShiftTime = random(2, 8);
   Sonia.start(this); 
-  LiveInput.start();  // start the liveInput engine (see liveInput example)
-  yourSecret = new Sample(44100*recTimeSec); // Create an empty Sample object with 44100*10 frames (ten seconds of data). 
+  LiveInput.start();  // start the liveInput engine
+  yourSecret = new Sample(44100*recTimeSec); // Create an empty Sample object with sample rate * clip length in seconds
   
   //load font
   helveticaFont = loadFont("HelveticaNeue-UltraLight-24.vlw");
