@@ -208,7 +208,7 @@ void drawScroller(){
 }
 
 void changePitch(){
-  
+    //modulate pitch
     if (pitchTimer >= pitchShiftTime){
       if (pitchShiftTime < 6){
         rate = (random(70, 80))*88200/(height);
@@ -220,6 +220,7 @@ void changePitch(){
       
   pitchTimer = 0;
   pitchShiftTime = random(2, 8);
+  //Bypass glitchy modulated pitch code, for now
   rate = (50)*88200/(height);
   }
   else{
