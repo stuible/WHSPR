@@ -14,9 +14,9 @@
 
 
 
-      Description:  Records, anomizes and stores your own secret 
+      Description:  Records, anonymizes and stores your own secret 
                     in return for a previous visiotrs secret.
-                    Anonamization is done through pitch
+                    Anonymization is done through pitch
                     modulation and automatic deletion of secrets
                     will be implemented shortly.
               
@@ -29,7 +29,7 @@
       Input:        Default microphone in either Windows or Mac
                     will be used.
 
-      Using Code:   This code requires the pressense of the 
+      Using Code:   This code requires the presence of the 
                     Sonia sound library that can be found at
                     http://sonia.pitaru.com/
                     Follow the installation instructions on
