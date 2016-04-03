@@ -1,6 +1,7 @@
 //Import libraries
 import pitaru.sonia_v2_9.*;
 import java.io.*;
+import processing.serial.*;
 
 // Fonts
 PFont helveticaFont;
@@ -22,6 +23,12 @@ String dataFolder = "WHSPR Recordings";  // Folder where the secrets will be sto
 boolean mouseDown; //Gobal mouseDown boolean
 int timeSinceRecStart;
 
+//Serial Variables
+Serial myPort;  // Create object from Serial class
+int val;      // Data received from the serial port
+int state = 31;
+int buttonDown = 1;
+
 void setup(){ 
   size(400,150);
   background(80,80,80);
@@ -35,6 +42,10 @@ void setup(){
   helveticaFont = loadFont("HelveticaNeue-UltraLight-24.vlw");
   dinFont = loadFont("DINPro-Light-24.vlw");
   futuraFont = loadFont("FuturaLT-Book-24.vlw");
+  
+  //setup serial
+  String portName = Serial.list()[1];
+  myPort = new Serial(this, portName, 9600);
   
   //create Recordings Directory
   File theDir = new File(dataFolder);
@@ -77,7 +88,23 @@ void setup(){
  
 void draw(){
  background(80,80,80);
- strokeWeight(1); 
+ strokeWeight(1);
+ 
+ if(myPort.available() > 0) {
+    state = myPort.read();;
+    
+    buttonDown = state & 1;
+    
+    if(buttonDown == 1){
+      println("Button Down");
+      mousePressed();
+    }
+    else {
+      println("Button Up");
+      mouseReleased();
+    }
+    
+  }
  
  if(theirSecret != null && theirSecret.isPlaying()){
  setPitch();
