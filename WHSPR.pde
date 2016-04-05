@@ -19,6 +19,7 @@ float pitchShiftTime;
 float rate;
 int pitchTimer = 0;
 int fileCount;
+String instructionString;
 String dataFolder = "WHSPR Recordings";  // Folder where the secrets will be stored
 boolean mouseDown; //Gobal mouseDown boolean
 int timeSinceRecStart;
@@ -30,7 +31,8 @@ int state = 31;
 int buttonDown = 1;
 
 void setup(){ 
-  size(400,150);
+  //size(400,150);
+  size(displayWidth, displayHeight);
   background(80,80,80);
   smooth();
   pitchShiftTime = random(2, 8);
@@ -42,6 +44,8 @@ void setup(){
   helveticaFont = loadFont("HelveticaNeue-UltraLight-24.vlw");
   dinFont = loadFont("DINPro-Light-24.vlw");
   futuraFont = loadFont("FuturaLT-Book-24.vlw");
+  
+  instructionString = "Press and Hold the Green Button, tell me a secret then release the button";
   
   //setup serial
   String portName = Serial.list()[1];
@@ -108,16 +112,19 @@ void draw(){
  
  if(theirSecret != null && theirSecret.isPlaying()){
  setPitch();
+ instructionString = "A Secret";
  }
  
  textFont(helveticaFont, 24);
  fill(150);
- text("TELL ME YOUR SECRET", width / 2 - 125, height / 2);
+ textAlign(CENTER, CENTER);
+ text(instructionString, width / 2, height / 2);
  drawScroller();
 } 
 
 void mousePressed(){ 
   mouseDown = true;
+  instructionString = "Recording Your Secret";
   yourSecret = new Sample(44100*recTimeSec);
   theirSecret = yourSecret;
   LiveInput.startRec(yourSecret); // Record LiveInput data into the Sample object. 
@@ -202,18 +209,18 @@ void drawScroller(){
 void changePitch(){
     //modulate pitch
     if (pitchTimer >= pitchShiftTime){
-      if (pitchShiftTime < 6){
-        rate = (random(70, 80))*88200/(height);
+      if (pitchShiftTime < 6.5){
+        rate = (random(60, 70))*88200/(100);
       }
       else {
         //rate = (random(130, 140))*88200/(height);
-        rate = (random(60, 80))*88200/(height);
+        rate = (random(40, 43))*88200/(100);
       }
       
   pitchTimer = 0;
-  pitchShiftTime = random(2, 8);
+  pitchShiftTime = random(4, 9);
   //Bypass glitchy modulated pitch code, for now
-  rate = (50)*88200/(height);
+  //rate = (40)*88200/(100);
   }
   else{
   pitchTimer++;
