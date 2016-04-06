@@ -7,28 +7,41 @@ import processing.serial.*;
 PFont helveticaFont;
 PFont dinFont;
 PFont futuraFont;
+PFont walkwayfontLarge;
+PFont futurafontLarge;
 
 // Create Samples Objects
 Sample yourSecret; // Object that will be recorded into
 Sample theirSecret; // Object that will load a random previously recorded clip
 
 // Global Variables
-int recTimeSec = 5; // Maximum size of sample in seconds
+int recTimeSec = 30; // Maximum size of sample in seconds
+float minRecTime = 0.7;
 int recordCount;
 float pitchShiftTime;
 float rate;
 int pitchTimer = 0;
+int secretBankSize = 10;
 int fileCount;
-String instructionString;
+String instructionString1;
+String instructionString2;
 String dataFolder = "WHSPR Recordings";  // Folder where the secrets will be stored
+String dataFolderHeard = "WHSPR Recordings/Heard";
 boolean mouseDown; //Gobal mouseDown boolean
 int timeSinceRecStart;
+int numberOfSecrtesThisSession;
+
+ArrayList<PVector> points1 = new ArrayList<PVector>();
+ArrayList<PVector> points2 = new ArrayList<PVector>();
 
 //Serial Variables
 Serial myPort;  // Create object from Serial class
 int val;      // Data received from the serial port
 int state = 31;
 int buttonDown = 1;
+
+File location = null;
+File newLocation = null;
 
 void setup(){ 
   //size(400,150);
@@ -44,8 +57,11 @@ void setup(){
   helveticaFont = loadFont("HelveticaNeue-UltraLight-24.vlw");
   dinFont = loadFont("DINPro-Light-24.vlw");
   futuraFont = loadFont("FuturaLT-Book-24.vlw");
+  walkwayfontLarge = loadFont("Walkway-100.vlw");
+  futurafontLarge = loadFont("FuturaLT-Light-100.vlw");
   
-  instructionString = "Press and Hold the Green Button, tell me a secret then release the button";
+  instructionString1 = "Press and Hold the Green Button";
+  instructionString2 = "Tell me a secret then release the button";
   
   //setup serial
   String portName = Serial.list()[1];
@@ -53,6 +69,7 @@ void setup(){
   
   //create Recordings Directory
   File theDir = new File(dataFolder);
+  File theHeardDir = new File(dataFolderHeard);
 
   // if the directory does not exist, create it
   if (!theDir.exists()) {
@@ -71,10 +88,21 @@ void setup(){
       }
   }
   
-  //check and display file count of our recordings folder OLD WAY
-  //  fileCount = new File(dataFolder).list().length - 1;
-  //  recordCount = fileCount;
-  //  println("There are " + fileCount + " secrets so far");
+  if (!theHeardDir.exists()) {
+      System.out.println("creating directory: " + theHeardDir);
+      boolean result = false;
+  
+      try{
+          theHeardDir.mkdir();
+          result = true;
+      } 
+      catch(SecurityException se){
+          //handle it
+      }        
+      if(result) {    
+          System.out.println("Heard DIR created");  
+      }
+  }
   
     //check and display .wav file count of our recordings folder
     FilenameFilter ff = new FilenameFilter() {
@@ -87,12 +115,29 @@ void setup(){
      int secretCount = theList.length;
      fileCount = secretCount;
      recordCount = fileCount;
+     numberOfSecrtesThisSession = fileCount;
      println("There are " + fileCount + " secrets so far");
+     
+     points1.add(new PVector(random(0, width), random(0, height)));
+     points2.add(new PVector(random(0, width), random(0, height)));
+     
+     for (int i = 1; i < fileCount; i++) {
+      points1.add(points2.get(i - 1));
+      points2.add(new PVector(random(0, width), random(0, height)));
+  }
 } 
  
 void draw(){
  background(80,80,80);
  strokeWeight(1);
+ 
+ for (int i = 0; i < points1.size(); i++) {
+   ellipseMode(CENTER);
+   stroke(#626262);
+   fill(#626262);
+  line(points1.get(i).x, points1.get(i).y, points2.get(i).x, points2.get(i).y);
+  ellipse(points1.get(i).x, points1.get(i).y, 15, 15);
+  }
  
  if(myPort.available() > 0) {
     state = myPort.read();;
@@ -112,19 +157,33 @@ void draw(){
  
  if(theirSecret != null && theirSecret.isPlaying()){
  setPitch();
- instructionString = "A Secret";
+ instructionString1 = "A Secret";
+ instructionString2 = "";
+ }
+ if (theirSecret != null && !theirSecret.isPlaying() && !mouseDown) {
+  instructionString1 = "Press and Hold the Green Button";
+  instructionString2 = "Tell me a secret then release the button";
  }
  
- textFont(helveticaFont, 24);
+ textFont(futurafontLarge, 75);
  fill(150);
  textAlign(CENTER, CENTER);
- text(instructionString, width / 2, height / 2);
+ text(instructionString1, width / 2, height / 2 - 50);
+ text(instructionString2, width / 2, height / 2 + 50);
+ textFont(futuraFont, 30);
+ text(numberOfSecrtesThisSession + " Secrets have been shared", width / 2, 50);
  drawScroller();
+ if(mouseDown){
+
+   }
+   
 } 
 
 void mousePressed(){ 
+
   mouseDown = true;
-  instructionString = "Recording Your Secret";
+  instructionString1 = "Recording Your Secret";
+  instructionString2 = "";
   yourSecret = new Sample(44100*recTimeSec);
   theirSecret = yourSecret;
   LiveInput.startRec(yourSecret); // Record LiveInput data into the Sample object. 
@@ -135,23 +194,69 @@ void mousePressed(){
 void mouseReleased(){ 
   mouseDown = false;
   LiveInput.stopRec(yourSecret); 
-  println("SAVEFILE");
-    
-  String basePath = new File("").getAbsolutePath();
-  System.out.println(basePath);
-  recordCount += 1;
-  yourSecret.saveFile("WHSPR Recordings/secret" + recordCount);
-  fileCount++;
-  println("There are " + fileCount + " secrets so far");
-  println("WHSPR Recordings/secret" + random(1, recordCount) + ".wav");
-  if(recordCount != 1){
-  theirSecret = new Sample("WHSPR Recordings/secret" + (int) random(1, recordCount) + ".wav"); 
-  setPitch();
-  theirSecret.play();
-  }
+  float[] frames = new float[yourSecret.getNumFrames()];
+  yourSecret.read(frames); 
+  int endframe = yourSecret.getNumFrames();
+  int zeroCounter = 0;   
+   for (int i = 0; i < frames.length; i++) {
+     if (frames[i]==0)
+       zeroCounter++;
+     else 
+       zeroCounter = 0;
+     if (zeroCounter == 100) 
+       endframe = i;
+   }
+   println("sample length: "+endframe/44100f);    
+
+   float[] data = new float[endframe];
+   System.arraycopy(frames, 0, data, 0, endframe);
+
+   Sample yourSecretCropped = new Sample(data.length);
+   yourSecretCropped.write(data);
   
-  println("PLAY");
-  println("There are " + recordCount + " secrets so far");
+  if(yourSecretCropped.getNumFrames() > 44100 * minRecTime){
+    println("SAVEFILE");
+    String basePath = new File("").getAbsolutePath();
+    System.out.println(basePath);
+    recordCount += 1;
+    addNewPoint();
+    
+    yourSecretCropped.saveFile("WHSPR Recordings/secret" + recordCount);
+    
+    fileCount++;
+    numberOfSecrtesThisSession++;
+    
+    println("There are " + fileCount + " secrets so far");
+    println("WHSPR Recordings/secret" + random(1, recordCount) + ".wav");
+    int randomClip = (int) random(1, recordCount);
+    if(recordCount != 1){
+    theirSecret = new Sample("WHSPR Recordings/secret" + randomClip + ".wav"); 
+    setPitch();
+    theirSecret.play();
+    if(fileCount > secretBankSize){
+    location = new File("WHSPR Recordings/secret" + randomClip + ".wav");
+    newLocation = new File("WHSPR Recordings/Heard/secret" + numberOfSecrtesThisSession + ".wav");
+    location.renameTo(newLocation);
+    
+    location = new File("WHSPR Recordings/secret" + fileCount + ".wav");
+    newLocation = new File("WHSPR Recordings/secret" + randomClip + ".wav");
+    location.renameTo(newLocation);
+    
+    fileCount--;
+    recordCount--;
+    }
+    
+    }
+  
+    println("PLAY");
+    println("There are " + recordCount + " secrets so far");
+  }
+  else {
+    println("Recording Too Short");
+    instructionString1 = "Secret was too short,";
+    instructionString2 = "surely you have more to say?";
+  }
+    
 } 
  
 public void stop(){ 
@@ -204,6 +309,11 @@ void drawScroller(){
  rect(0,0,marker,height);
  timeSinceRecStart = 0; 
  }
+}
+
+void addNewPoint(){
+  points1.add(points2.get(points1.size() - 1));
+  points2.add(new PVector(random(0, width), random(0, height)));
 }
 
 void changePitch(){
