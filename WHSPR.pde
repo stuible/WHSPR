@@ -13,12 +13,16 @@ PFont futurafontLarge;
 // Create Samples Objects
 Sample yourSecret; // Object that will be recorded into
 Sample theirSecret; // Object that will load a random previously recorded clip
+Sample yourSecretCropped;
 
 // Global Variables
 int recTimeSec = 30; // Maximum size of sample in seconds
 float minRecTime = 0.7;
 int recordCount;
 float pitchShiftTime;
+int tooShortWarningTimer;
+boolean tooShortWarning;
+int heardSecretCount;
 float rate;
 int pitchTimer = 0;
 int secretBankSize = 10;
@@ -110,20 +114,31 @@ void setup(){
          return name.endsWith(".wav");
           }
         };
+    
+    FilenameFilter ffh = new FilenameFilter() {
+      public boolean accept(File theHeardDir, String name) {
+         return name.endsWith(".wav");
+          }
+        };
 
      String[] theList = theDir.list(ff);
      int secretCount = theList.length;
+     
+     String[] theHeardList = theHeardDir.list(ffh);
+     
+     
+     heardSecretCount = theHeardList.length;
      fileCount = secretCount;
      recordCount = fileCount;
      numberOfSecrtesThisSession = fileCount;
      println("There are " + fileCount + " secrets so far");
      
-     points1.add(new PVector(random(0, width), random(0, height)));
-     points2.add(new PVector(random(0, width), random(0, height)));
+     points1.add(new PVector(random(25, width - 25), random(25, height - 25)));
+     points2.add(new PVector(random(25, width - 25), random(25, height - 25)));
      
      for (int i = 1; i < fileCount; i++) {
       points1.add(points2.get(i - 1));
-      points2.add(new PVector(random(0, width), random(0, height)));
+      points2.add(new PVector(random(25, width - 25), random(25, height - 25)));
   }
 } 
  
@@ -160,9 +175,18 @@ void draw(){
  instructionString1 = "A Secret";
  instructionString2 = "";
  }
- if (theirSecret != null && !theirSecret.isPlaying() && !mouseDown) {
+ if (theirSecret != null && !theirSecret.isPlaying() && !mouseDown && !tooShortWarning) {
   instructionString1 = "Press and Hold the Green Button";
   instructionString2 = "Tell me a secret then release the button";
+ }
+ if (tooShortWarning && tooShortWarningTimer < 5 * 30){
+   instructionString1 = "Secret was too short,";
+   instructionString2 = "surely you have more to say?";
+   tooShortWarningTimer++;
+ }
+ else {
+   tooShortWarning = false;
+   tooShortWarningTimer = 0;
  }
  
  textFont(futurafontLarge, 75);
@@ -180,6 +204,7 @@ void draw(){
 } 
 
 void mousePressed(){ 
+  if((yourSecret == null || !yourSecret.isPlaying()) && (theirSecret == null || !theirSecret.isPlaying()) && (yourSecretCropped == null|| !yourSecretCropped.isPlaying())){
 
   mouseDown = true;
   instructionString1 = "Recording Your Secret";
@@ -189,9 +214,11 @@ void mousePressed(){
   LiveInput.startRec(yourSecret); // Record LiveInput data into the Sample object. 
   // The recording will automatically end when all of the Sample's frames are filled with data. 
   println("REC");
+  }
 } 
 
 void mouseReleased(){ 
+  if((yourSecret == null || !yourSecret.isPlaying()) && (theirSecret == null || !theirSecret.isPlaying()) && (yourSecretCropped == null|| !yourSecretCropped.isPlaying())){
   mouseDown = false;
   LiveInput.stopRec(yourSecret); 
   float[] frames = new float[yourSecret.getNumFrames()];
@@ -211,7 +238,7 @@ void mouseReleased(){
    float[] data = new float[endframe];
    System.arraycopy(frames, 0, data, 0, endframe);
 
-   Sample yourSecretCropped = new Sample(data.length);
+   yourSecretCropped = new Sample(data.length);
    yourSecretCropped.write(data);
   
   if(yourSecretCropped.getNumFrames() > 44100 * minRecTime){
@@ -233,9 +260,9 @@ void mouseReleased(){
     theirSecret = new Sample("WHSPR Recordings/secret" + randomClip + ".wav"); 
     setPitch();
     theirSecret.play();
-    if(fileCount > secretBankSize){
+    if(fileCount >= secretBankSize){
     location = new File("WHSPR Recordings/secret" + randomClip + ".wav");
-    newLocation = new File("WHSPR Recordings/Heard/secret" + numberOfSecrtesThisSession + ".wav");
+    newLocation = new File("WHSPR Recordings/Heard/secret" +  heardSecretCount + ".wav");
     location.renameTo(newLocation);
     
     location = new File("WHSPR Recordings/secret" + fileCount + ".wav");
@@ -244,6 +271,7 @@ void mouseReleased(){
     
     fileCount--;
     recordCount--;
+    heardSecretCount++;
     }
     
     }
@@ -253,10 +281,9 @@ void mouseReleased(){
   }
   else {
     println("Recording Too Short");
-    instructionString1 = "Secret was too short,";
-    instructionString2 = "surely you have more to say?";
+    tooShortWarning = true;
   }
-    
+  }
 } 
  
 public void stop(){ 
@@ -313,7 +340,7 @@ void drawScroller(){
 
 void addNewPoint(){
   points1.add(points2.get(points1.size() - 1));
-  points2.add(new PVector(random(0, width), random(0, height)));
+  points2.add(new PVector(random(25, width - 25), random(25, height - 25)));
 }
 
 void changePitch(){
@@ -326,11 +353,11 @@ void changePitch(){
         //rate = (random(130, 140))*88200/(height);
         rate = (random(40, 43))*88200/(100);
       }
-      
+  rate = (random(40, 43))*88200/(100);    
   pitchTimer = 0;
   pitchShiftTime = random(4, 9);
   //Bypass glitchy modulated pitch code, for now
-  //rate = (40)*88200/(100);
+  
   }
   else{
   pitchTimer++;
